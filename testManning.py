@@ -2,26 +2,29 @@
 Calculate Manning coeficient
 Flow Resistance in Open Channel Due to Vegetation at Reach
 Scale: A Review (D’Ippolito,2021)
-Flexibilt range: (-2 - 0)
-Bx=channel blockage
+Flexibilty range: (-2 - 0)
 wVeg*hVeg:total cross-sectional area of vegetation in the channel (Fig.5)
-"""
-import numpy as np
-import matplotlib.pyplot as plt
-#Depth of water (m)
+grav:Gravitational acceleration constant (m.s-2)
+a:The frontal area per unit volume parameter (m-1), for channel it is about 100
+C: coefficient to parameteriz the shear stress at the interface between vegetated and unvegetated regions.
+    The range of this parameter is 0.05–0.13 (Luhar and Nepf, 2012).
+kLN: a constant to correct the dimension of equation (m1/3.s-1)
+Bx:Blockage factor
+DensVeg=(m*(np.pi)*dVeg^2)/4
 
-'''flexibilty=0'''
+if flexibility==0:'''
+
+import matplotlib.pyplot as plt
+
 hVeg=0.214
 LVeg=2.47
 W=3.56
 CDrag=1
 a=100
-Cf=0.052
+C=0.052
 grav=9.81
 kLN=1
-'''Bx=(LVeg*hVeg)/(W*DWH)'''
-'''DensVeg=(m*(np.pi)*dVeg^2)/4'''
-'''if flexibility==0:'''
+
 def Manning(DWH):
     if DWH<=hVeg:
         Bx=LVeg/W
