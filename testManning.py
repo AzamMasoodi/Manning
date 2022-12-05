@@ -1,14 +1,5 @@
 '''
-Calculate Manning coefficient
-Flow Resistance in Open Channel Due to Vegetation at Reach
-Scale: A Review (D’Ippolito,2021)
-Flexibilty range: (-2 - 0)
-wVeg*hVeg:total cross-sectional area of vegetation in the channel (Fig.5)
-'''
 
-'''
-DWH: Depth of water (m)
-grav:Gravitational acceleration constant (m.s-2)
 a:The frontal area per unit volume parameter (m-1), for channel it is about 100
 C: coefficient to parameteriz the shear stress at the interface between vegetated and unvegetated regions.
     The range of this parameter is 0.05–0.13 (Luhar and Nepf, 2012).
@@ -16,55 +7,108 @@ kLN: a constant to correct the dimension of equation (m1/3.s-1)
 Bx:Blockage factor
 DensVeg=(m*(np.pi)*dVeg^2)/4
 
-if flexibility==0:'''
-
-import pandas as pd
+if flexibility==0:
+'''
 import openpyxl 
 import matplotlib.pyplot as plt
+grav_sqrt=pow(9.81, 0.5)
+
+def Manning(WHr, PH, wVeg, FW, C, CDrag, a, kLN):
+    """
+    Calcualtates Manning n accdording to Luhar and Nepf(2012) doi: 
+
+    Parameters
+    ----------
+    WHr : float
+        Water surface depth in m
+    PH : float
+        Height of Vegation in m
+    wVeg : float
+        Width of Vegation in m
+    FW : float
+        Width of flow in m
+    C : float
+        coefficient to parameteriz the shear stress at the interface between vegetated and unvegetated regions.
+            The range of this parameter is 0.05–0.13
+    CDrag : float
+        DESCRIPTION.
+    a : float
+        The frontal area per unit volume parameter (m-1), for channel it is about 100
+    kLN : float
+        a constant to correct the dimension of equation in :math:`m^{1/3}*s^{-1}`
 
 
-wrkbk = openpyxl.load_workbook("NikoraData.xlsx") 
-print(wrkbk)
-df = wrkbk.active
-mylist_n=[]
-mylist_Bx=[]
-for i in range(2, df.max_row+1):
-    DWH=(df.cell(row=i,column=1)).value
-    W=(df.cell(row=i,column=2)).value
-    hVeg=(df.cell(row=i,column=3)).value
-    wVeg=(df.cell(row=i,column=4)).value
-    CDrag=1
-    a=100
-    C=0.052 #input(float,'Coefficent of shear stress at the interface')  # The range of this parameter is 0.05–0.13 (Luhar and Nepf, 2012).
-    grav=9.81
-    kLN=1
-    def Manning(DWH):
-        if DWH<=hVeg:
-            Bx = wVeg/W
-            if Bx < 0.8:
-                '''Eq.24'''
-                n = ((kLN*(DWH**(1/6)))/(grav**0.5))*((C/2)**0.5)*((1-Bx)**(-3/2))
-            else:
-                '''Eq.26'''
-                n = ((kLN*(DWH**(1/6)))/(grav**0.5))*((CDrag*a*DWH/2)**(1/2))
-            mylist_n.append(n)
-            mylist_Bx.append(Bx)
-            return mylist_n, mylist_Bx, Bx
-            
+    Returns
+    -------
+    float
+        Manning n value for current flow and vegetation conditions in :math:`m^{1/3}*s^{-1}`
+
+    """
+    if WHr<=PH:
+        Bx = wVeg/FW
+        if Bx < 0.8:
+            #  Eq.24
+            return ((kLN*(WHr**(1/6)))/grav_sqrt)*((C/2)**0.5)*((1-Bx)**(-3/2)), Bx
         else:
-            #DHW>=hVeg
-            Bx = (wVeg*hVeg)/(W*DWH)
-            ''' Eq.29 pp.14'''
-            n =((kLN*(DWH**(1/6)))/(grav**0.5))*(1/(((2/C)**0.5)*((1-hVeg/DWH)**1.5)+((2*hVeg/(CDrag*a))**0.5)*(1/DWH)))
-            mylist_n.append(n)
-            mylist_Bx.append(Bx)
-        return mylist_n, mylist_Bx, Bx
-        
+            #  Eq.26
+            return ((kLN*(WHr**(1/6)))/grav_sqrt)*((CDrag*a*WHr/2)**(1/2)), Bx
+    else:
+        #HWr>PH
+        Bx = (wVeg*PH)/(FW*WHr)
+        #  Eq.29 pp.14
+        return ((kLN*(WHr**(1/6)))/grav_sqrt)*(1/(((2/C)**0.5)*((1-PH/WHr)**1.5)+((2*PH/(CDrag*a))**0.5)*(1/WHr))), Bx
 
-    Manning(DWH)
-plt.plot(mylist_Bx, mylist_n, 'ro')
+def ManningLoop(CDrag, a, C, kLN):
+
+    """
+    
+
+    Parameters
+    ----------
+    CDrag : float
+        Drag coefficient of vegetation
+    a : float
+        The frontal area per unit volume parameter (m-1), for channel it is about 100
+    C : TYPE
+        coefficient to parameteriz the shear stress at the interface between vegetated and unvegetated regions.
+    kLN : a constant to correct the dimension of equation in :math:`m^{1/3}*s^{-1}`
+
+    Returns
+    -------
+    list_n : Manning n
+    list_Bx : Vegetation Blockage
+    list_DWH : Depth of water (m)
+    list_Kstr : Strikler Coefficient
+
+    """
+    wrkbk = openpyxl.load_workbook("Data.xlsx") 
+    df = wrkbk.active
+    list_n=[]
+    list_Bx=[]
+    list_WHr=[]
+    list_Kstr=[]
+    for i in range(2, df.max_row+1):
+        WHr=(df.cell(row=i,column=1)).value
+        FW=(df.cell(row=i,column=2)).value
+        PH=(df.cell(row=i,column=3)).value
+        wVeg=(df.cell(row=i,column=4)).value
+        n, Bx = Manning(WHr, PH, wVeg, FW, C, CDrag, a, kLN)
+        list_n.append(n)
+        list_Bx.append(Bx)
+        list_WHr.append(WHr)
+        list_Kstr.append(1/n)
+    return list_n, list_Bx, list_WHr, list_Kstr
+
+list_n, list_Bx, list_WHr, list_Kstr = ManningLoop( 1, 100, 0.052, 1)
+
+plt.plot(list_Bx, list_n, 'ro')
+plt.xlabel('Block index')
+plt.ylabel('Manning coeficient')
 plt.show()
-output=["%.3f" % elem for elem in mylist_n]
-output_2=["%.3f" % elem for elem in mylist_Bx]
-print('n:',output)
-print('Bx:',output_2)
+plt.plot(list_Kstr, list_WHr)
+plt.xlabel('K_str')
+plt.ylabel('Depth of water(m)')
+plt.show()
+#print('n:',["%.3f" % elem for elem in list_n])
+#print('Bx:',["%.3f" % elem for elem in list_Bx])
+
